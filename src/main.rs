@@ -115,9 +115,19 @@ fn setup() -> Result<&'static Path> {
 
 fn cont(duration: Duration) {
     loop {
-        println!("loop");
+        println!("Loop");
 
         let conn = Connection::open(Path::new(DB_PATH)).unwrap();
+
+        let remaining: u32 = conn
+            .query_row(
+                "SELECT remaining, status FROM pomodoro WHERE id = 1;",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        println!("Remaining: {}", remaining);
 
         let query = "
             UPDATE pomodoro
