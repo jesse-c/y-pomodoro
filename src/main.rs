@@ -1,6 +1,7 @@
 extern crate ctrlc;
 extern crate rusqlite;
 
+use notify_rust::Notification;
 use rusqlite::Connection;
 use std::fs;
 use std::io::{BufRead, BufReader, Result};
@@ -119,26 +120,42 @@ fn cont(duration: Duration) {
 
         let conn = Connection::open(Path::new(DB_PATH)).unwrap();
 
-        let remaining: u32 = conn
-            .query_row(
-                "SELECT remaining, status FROM pomodoro WHERE id = 1;",
-                [],
-                |row| row.get(0),
-            )
+        let query = "SELECT remaining, status FROM pomodoro WHERE id = 1;";
+
+        let (remaining, status) = conn
+            .query_row::<(u32, u32), _, _>(query, [], |row| {
+                Ok((row.get_unwrap(0), row.get_unwrap(1)))
+            })
             .unwrap();
 
-        println!("Remaining: {}", remaining);
+        println!("Command execute remaining: {}", remaining);
+        println!("Command execute status: {}", status);
 
-        let query = "
+        if remaining == 0 && status == 2 {
+            Notification::new()
+                .summary("Timer finished")
+                .show()
+                .unwrap();
+
+            let query = "UPDATE pomodoro SET status = 0 WHERE id = 1;";
+            println!("Query: {:#?}", query);
+
+            match conn.execute(query, []) {
+                Ok(result) => println!("Loop execute result: {}", result),
+                Err(err) => println!("Loop execute error: {}", err),
+            }
+        } else {
+            let query = "
             UPDATE pomodoro
             SET remaining = remaining - 1
             WHERE id = 1
             AND status = 2;
         ";
 
-        match conn.execute(query, []) {
-            Ok(result) => println!("Loop execute result: {}", result),
-            Err(err) => println!("Loop execute error: {}", err),
+            match conn.execute(query, []) {
+                Ok(result) => println!("Loop execute result: {}", result),
+                Err(err) => println!("Loop execute error: {}", err),
+            }
         }
 
         thread::sleep(duration);

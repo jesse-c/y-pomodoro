@@ -6,3 +6,4 @@ edition = "2018"
 [dependencies]
 ctrlc = "3.1.9"
 rusqlite = "0.25.3"
+notify-rust = "4"
