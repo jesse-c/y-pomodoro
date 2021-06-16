@@ -37,23 +37,58 @@ fn handle_client(stream: UnixStream) -> Result<()> {
 
     let conn = Connection::open(Path::new(DB_PATH)).unwrap();
 
-    let query = match command.as_str() {
-        "start" => "UPDATE pomodoro SET remaining = (25 * 60), status = 2 WHERE id = 1;",
-        "show" => "SELECT remaining, status FROM pomodoro WHERE id = 1;",
-        "pause" => "UPDATE pomodoro SET status = 1 WHERE id = 1;",
-        "resume" => "UPDATE pomodoro SET status = 2 WHERE id = 1;",
-        "stop" => "UPDATE pomodoro SET status = 0 WHERE id = 1;",
-        _ => "Unrecognised command",
+    match command.as_str() {
+        "start" => {
+            let query = "UPDATE pomodoro SET remaining = (25 * 60), status = 2 WHERE id = 1;";
+            println!("Query: {:#?}", query);
+
+            match conn.execute(query, []) {
+                Ok(result) => println!("Command execute result: {}", result),
+                Err(err) => println!("Command execute error: {}", err),
+            }
+        }
+        "show" => {
+            let query = "SELECT remaining, status FROM pomodoro WHERE id = 1;";
+            println!("Query: {:#?}", query);
+
+            match conn.query_row::<u32, _, _>(
+                "SELECT remaining, status FROM pomodoro WHERE id = 1;",
+                [],
+                |row| row.get(0),
+            ) {
+                Ok(result) => println!("Command execute result: {}", result),
+                Err(err) => println!("Command execute error: {}", err),
+            }
+        }
+        "pause" => {
+            let query = "UPDATE pomodoro SET status = 1 WHERE id = 1;";
+            println!("Query: {:#?}", query);
+
+            match conn.execute(query, []) {
+                Ok(result) => println!("Command execute result: {}", result),
+                Err(err) => println!("Command execute error: {}", err),
+            }
+        }
+        "resume" => {
+            let query = "UPDATE pomodoro SET status = 2 WHERE id = 1;";
+            println!("Query: {:#?}", query);
+
+            match conn.execute(query, []) {
+                Ok(result) => println!("Command execute result: {}", result),
+                Err(err) => println!("Command execute error: {}", err),
+            }
+        }
+        "stop" => {
+            let query = "UPDATE pomodoro SET status = 0 WHERE id = 1;";
+            println!("Query: {:#?}", query);
+
+            match conn.execute(query, []) {
+                Ok(result) => println!("Command execute result: {}", result),
+                Err(err) => println!("Command execute error: {}", err),
+            }
+        }
+        _ => (),
     };
-
-    println!("Query: {:#?}", query);
-
-    // let query = "UPDATE pomodoro SET remaining = (25 * 60), status = 2 WHERE id = 1;";
-
-    match conn.execute(query, []) {
-        Ok(result) => println!("Command execute result: {}", result),
-        Err(err) => println!("Command execute error: {}", err),
-    }
 
     Ok(())
 }
