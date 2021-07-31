@@ -4,7 +4,7 @@ extern crate rusqlite;
 use notify_rust::Notification;
 use rusqlite::Connection;
 use std::fs;
-use std::io::{BufRead, BufReader, Result};
+use std::io::{BufRead, BufReader, Result, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
 use std::process;
@@ -29,6 +29,8 @@ const DB_PATH: &str = "./pomodoro.db";
 // 2           status      integer     0                       0
 
 fn handle_client(stream: UnixStream) -> Result<()> {
+    let mut a = stream.try_clone().unwrap();
+
     let mut stream = BufReader::new(stream);
     let mut command = String::new();
 
@@ -52,14 +54,25 @@ fn handle_client(stream: UnixStream) -> Result<()> {
             let query = "SELECT remaining, status FROM pomodoro WHERE id = 1;";
             println!("Query: {:#?}", query);
 
-            match conn.query_row::<u32, _, _>(
-                "SELECT remaining, status FROM pomodoro WHERE id = 1;",
-                [],
-                |row| row.get(0),
-            ) {
-                Ok(result) => println!("Command execute result: {}", result),
-                Err(err) => println!("Command execute error: {}", err),
-            }
+            let (remaining, status) = conn
+                .query_row::<(u32, u32), _, _>(query, [], |row| {
+                    Ok((row.get_unwrap(0), row.get_unwrap(1)))
+                })
+                .unwrap();
+
+            println!("Command execute remaining: {}", remaining);
+            println!("Command execute status: {}", status);
+
+            let status_ = match status {
+                0 => "Stopped",
+                1 => "Paused",
+                2 => "Started",
+                _ => panic!("unknown status"),
+            };
+
+            let msg = format!("Status: {} / Remaining: {}m", status_, remaining / 60);
+
+            a.write_all(msg.as_bytes()).unwrap();
         }
         "pause" => {
             let query = "UPDATE pomodoro SET status = 1 WHERE id = 1;";
