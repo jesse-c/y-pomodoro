@@ -46,7 +46,13 @@ fn handle_client(stream: UnixStream) -> Result<()> {
             println!("Query: {:#?}", query);
 
             match conn.execute(query, []) {
-                Ok(result) => println!("Command execute result: {}", result),
+                Ok(result) => {
+                    println!("Command execute result: {}", result);
+
+                    let msg = format!("Started");
+
+                    a.write_all(msg.as_bytes()).unwrap();
+                }
                 Err(err) => println!("Command execute error: {}", err),
             }
         }
@@ -79,7 +85,13 @@ fn handle_client(stream: UnixStream) -> Result<()> {
             println!("Query: {:#?}", query);
 
             match conn.execute(query, []) {
-                Ok(result) => println!("Command execute result: {}", result),
+                Ok(result) => {
+                    println!("Command execute result: {}", result);
+
+                    let msg = format!("Paused");
+
+                    a.write_all(msg.as_bytes()).unwrap();
+                }
                 Err(err) => println!("Command execute error: {}", err),
             }
         }
@@ -88,7 +100,13 @@ fn handle_client(stream: UnixStream) -> Result<()> {
             println!("Query: {:#?}", query);
 
             match conn.execute(query, []) {
-                Ok(result) => println!("Command execute result: {}", result),
+                Ok(result) => {
+                    println!("Command execute result: {}", result);
+
+                    let msg = format!("Resumed");
+
+                    a.write_all(msg.as_bytes()).unwrap();
+                }
                 Err(err) => println!("Command execute error: {}", err),
             }
         }
@@ -97,7 +115,13 @@ fn handle_client(stream: UnixStream) -> Result<()> {
             println!("Query: {:#?}", query);
 
             match conn.execute(query, []) {
-                Ok(result) => println!("Command execute result: {}", result),
+                Ok(result) => {
+                    println!("Command execute result: {}", result);
+
+                    let msg = format!("Stopped");
+
+                    a.write_all(msg.as_bytes()).unwrap();
+                }
                 Err(err) => println!("Command execute error: {}", err),
             }
         }
