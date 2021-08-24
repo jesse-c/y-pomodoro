@@ -1,7 +1,7 @@
 extern crate ctrlc;
 extern crate rusqlite;
 
-use notify_rust::Notification;
+use notify_rust::{Notification, Timeout};
 use rusqlite::Connection;
 use std::fs;
 use std::io::{BufRead, BufReader, Result, Write};
@@ -171,6 +171,8 @@ fn cont(duration: Duration) {
         if remaining == 0 && status == 2 {
             Notification::new()
                 .summary("Timer finished")
+                .timeout(Timeout::Never)
+                .sound_name("system sound")
                 .show()
                 .unwrap();
 
