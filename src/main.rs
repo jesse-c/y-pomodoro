@@ -20,8 +20,6 @@ const DB_PATH: &str = "./pomodoro.db";
 // 1: Paused
 // 2: Started
 //
-// CREATE TABLE IF NOT EXISTS "pomodoro" ("id" integer NOT NULL,"remaining" integer NOT NULL,"status" integer, PRIMARY KEY (id));
-//
 // cid         name        type        notnull     dflt_value  pk
 // ----------  ----------  ----------  ----------  ----------  ----------
 // 0           id          integer     1                       1
@@ -142,6 +140,32 @@ fn shutdown(socket: &'static Path) {
 }
 
 fn setup() -> Result<&'static Path> {
+    let db = Path::new(DB_PATH);
+
+    if !db.exists() {
+        let conn = Connection::open(Path::new(DB_PATH)).unwrap();
+        let query = r#"CREATE TABLE IF NOT EXISTS "pomodoro" ("id" integer NOT NULL,"remaining" integer NOT NULL,"status" integer, PRIMARY KEY (id));"#;
+
+        match conn.execute(query, []) {
+            Ok(result) => {
+                println!("Command execute result: {}", result);
+                println!("Setup local database");
+            }
+            Err(err) => println!("Command execute error: {}", err),
+        }
+
+        let conn = Connection::open(Path::new(DB_PATH)).unwrap();
+        let query = r#"INSERT INTO pomodoro (remaining, status) VALUES(1500, 0);"#;
+
+        match conn.execute(query, []) {
+            Ok(result) => {
+                println!("Command execute result: {}", result);
+                println!("Setup initial pomodoro");
+            }
+            Err(err) => println!("Command execute error: {}", err),
+        }
+    }
+
     let socket = Path::new(SOCKET_PATH);
 
     if socket.exists() {
