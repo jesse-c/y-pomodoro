@@ -1,5 +1,6 @@
 extern crate ctrlc;
 extern crate rusqlite;
+// extern crate msgbox;
 
 use notify_rust::{Notification, Timeout};
 use rusqlite::Connection;
@@ -200,6 +201,8 @@ fn cont(duration: Duration) {
                 .show()
                 .unwrap();
 
+            /* msgbox::create("Hello Title", "Hello World!", msgbox::IconType::Info).unwrap();
+ */
             let query = "UPDATE pomodoro SET status = 0 WHERE id = 1;";
             println!("Query: {:#?}", query);
 
