@@ -130,8 +130,8 @@ pub fn do_next(pomodoro: Pomodoro) -> Pomodoro {
         State::Working(duration) => {
             if duration == Duration::from_secs(60 * TIMER_LENGTH_IN_MINUTES) {
                 // We've reached the end of the timer
-                let break_count = pomodoro.break_count + 1;
-                let state: State = if break_count == SET {
+                let completed_count = pomodoro.completed_count + 1;
+                let state: State = if pomodoro.break_count == SET {
                     State::TakingLongBreak(Duration::from_secs(0))
                 } else {
                     State::TakingShortBreak(Duration::from_secs(0))
@@ -139,36 +139,52 @@ pub fn do_next(pomodoro: Pomodoro) -> Pomodoro {
 
                 Pomodoro {
                     state,
-                    break_count,
+                    completed_count,
                     ..pomodoro
                 }
             } else {
+                // The end of the timer hasn't been reached so there's nothing to do next
                 pomodoro
             }
         }
         // Check if we've reached the end of the short break timer
         State::TakingShortBreak(duration) => {
             if duration == Duration::from_secs(60 * SHORT_BREAK_LENGTH_IN_MINUTES) {
+                let break_count = pomodoro.break_count + 1;
+
                 // Continue into the next working state
                 let state: State = State::Working(Duration::from_secs(0));
 
-                Pomodoro { state, ..pomodoro }
+                Pomodoro {
+                    state,
+                    break_count,
+                    ..pomodoro
+                }
             } else {
+                // The end of the timer hasn't been reached so there's nothing to do next
                 pomodoro
             }
         }
         // Check if we've reached the end of the long break timer
         State::TakingLongBreak(duration) => {
             if duration == Duration::from_secs(60 * LONG_BREAK_LENGTH_IN_MINUTES) {
+                let break_count = pomodoro.break_count + 1;
+
                 // Don't do anything
                 let state: State = State::Stopped;
 
-                Pomodoro { state, ..pomodoro }
+                Pomodoro {
+                    state,
+                    break_count,
+                    ..pomodoro
+                }
             } else {
+                // The end of the timer hasn't been reached so there's nothing to do next
                 pomodoro
             }
         }
 
+        // The other states don't require anything to be done next
         _ => pomodoro,
     }
 }
