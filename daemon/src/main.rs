@@ -67,9 +67,14 @@ fn l(rx1: Receiver<Command>, tx2: Sender<CommandResult>) {
 
 // # Server
 //
-// This is the bare-minimum server that listens for commands.
-// It sends the commands along th the logic.
+// It sends the commands along the the logic.
 fn s(tx1: Sender<Command>, rx2: Receiver<CommandResult>) {
+    // TODO Other server like REST, gRPC, .. ?
+    socket_server(tx1, rx2);
+}
+
+// This is the bare-minimum server that listens for commands.
+fn socket_server(tx1: Sender<Command>, rx2: Receiver<CommandResult>) {
     // We're going to use this more than once
     let socket = Path::new(SOCKET_PATH);
 
