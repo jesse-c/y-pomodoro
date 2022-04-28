@@ -5,7 +5,7 @@ use std::time::Duration;
 const SET: u64 = 4;
 const TIMER_LENGTH_IN_MINUTES: u64 = 25;
 const SHORT_BREAK_LENGTH_IN_MINUTES: u64 = 5;
-const LONG_BREAK_LENGTH_IN_MINUTES: u64 = 20;
+const LONG_BREAK_LENGTH_IN_MINUTES: u64 = 15;
 
 #[derive(Debug, Copy, Clone, PartialEq, Deserialize, Serialize)]
 pub enum Command {
