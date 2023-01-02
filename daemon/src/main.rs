@@ -1,22 +1,12 @@
-extern crate rmp_serde as rmps;
 extern crate serde;
-extern crate serde_derive;
+extern crate ws;
 
-use pomodoro_core::{Command, CommandResult, Pomodoro, State};
-use rmps::decode;
-use rmps::Serializer;
-use serde::Serialize;
-use std::fs;
-use std::io::BufReader;
-use std::io::Write;
-use std::os::unix::net::UnixListener;
-use std::path::Path;
+use pomodoro_core::{Command, CommandResult, Output, Pomodoro, Response, State};
+use std::str::FromStr;
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::time::Duration;
-
-const SOCKET_PATH: &str = "/tmp/pomodoro.sock";
 
 fn main() {
     let (tx1, rx1): (Sender<Command>, Receiver<Command>) = mpsc::channel();
@@ -69,71 +59,113 @@ fn l(rx1: Receiver<Command>, tx2: Sender<CommandResult>) {
 //
 // It sends the commands along the the logic.
 fn s(tx1: Sender<Command>, rx2: Receiver<CommandResult>) {
-    // TODO Other server like REST, gRPC, .. ?
-    socket_server(tx1, rx2);
+    websocket_server(tx1, rx2);
 }
 
 // This is the bare-minimum server that listens for commands.
-fn socket_server(tx1: Sender<Command>, rx2: Receiver<CommandResult>) {
-    // We're going to use this more than once
-    let socket = Path::new(SOCKET_PATH);
+struct Server<'a> {
+    out: ws::Sender,
+    tx1: &'a Sender<Command>,
+    rx2: &'a Receiver<CommandResult>,
+}
 
-    // Cleanup any previous leftover socket
-    if socket.exists() {
-        fs::remove_file(&socket).unwrap();
-    }
+impl ws::Handler for Server<'_> // Use a generic lifetime
+{
+    fn on_message(&mut self, msg: ws::Message) -> ws::Result<()> {
+        println!("Message received: {:?}", msg);
+        match msg {
+            ws::Message::Text(text) => {
+                println!("Supported message type");
 
-    let listener = UnixListener::bind(&socket).unwrap();
-
-    for stream in listener.incoming() {
-        match stream {
-            Ok(stream) => {
-                let mut a = stream.try_clone().unwrap();
-                let stream = BufReader::new(stream);
-
-                let command: Result<Command, decode::Error> = decode::from_read(stream);
+                let command = Command::from_str(&text);
 
                 match command {
                     Ok(command) => {
                         println!("Command: {:?}", command);
-                        match tx1.send(command) {
-                            Ok(_result) => match rx2.recv() {
-                                Ok(command_result) => {
-                                    let mut buf = Vec::new();
-                                    command_result
-                                        .serialize(&mut Serializer::new(&mut buf))
+
+                        match self.tx1.send(command) {
+                            Ok(_result) => match self.rx2.recv() {
+                                Ok(command_result) => match command_result {
+                                    CommandResult::Success(pomodoro) => {
+                                        let buf = serde_json::to_string(&Response {
+                                            command: command,
+                                            result: Output::Success,
+                                            pomodoro: Some(pomodoro),
+                                        })
                                         .unwrap();
+                                        println!("{}", buf);
 
-                                    a.write_all(&buf).unwrap();
-                                }
+                                        let x = ws::Message::text(buf);
 
+                                        self.out.send(x)
+                                    }
+                                    CommandResult::Failure => {
+                                        let buf = serde_json::to_string(&Response {
+                                            command: command,
+                                            result: Output::Failure,
+                                            pomodoro: None,
+                                        })
+                                        .unwrap();
+                                        println!("{}", buf);
+
+                                        let x = ws::Message::text(buf);
+
+                                        self.out.send(x)
+                                    }
+                                },
                                 Err(_err) => {
-                                    let mut buf = Vec::new();
-                                    CommandResult::Failure
-                                        .serialize(&mut Serializer::new(&mut buf))
-                                        .unwrap();
+                                    let buf = serde_json::to_string(&Response {
+                                        command: command,
+                                        result: Output::Failure,
+                                        pomodoro: None,
+                                    })
+                                    .unwrap();
+                                    println!("{}", buf);
 
-                                    a.write_all(&buf).unwrap();
+                                    let x = ws::Message::text(buf);
+
+                                    self.out.send(x)
                                 }
                             },
                             Err(_err) => {
-                                let mut buf = Vec::new();
-                                CommandResult::Failure
-                                    .serialize(&mut Serializer::new(&mut buf))
-                                    .unwrap();
+                                let buf = serde_json::to_string(&Response {
+                                    command: command,
+                                    result: Output::Failure,
+                                    pomodoro: None,
+                                })
+                                .unwrap();
+                                println!("{}", buf);
 
-                                a.write_all(&buf).unwrap();
+                                let x = ws::Message::text(buf);
+
+                                self.out.send(x)
                             }
                         }
                     }
-                    Err(err) => println!("Invalid command: {}", err),
+                    Err(err) => {
+                        println!("Invalid command: {:#?}", err);
+                        self.out.send("Invalid command")
+                    }
                 }
-
-                continue;
             }
-            Err(_err) => {
-                continue;
+            ws::Message::Binary(_binary) => {
+                println!("Unsupported message type");
+
+                self.out.send("Unsupported message value")
             }
         }
     }
+
+    fn on_close(&mut self, code: ws::CloseCode, reason: &str) {
+        println!("WebSocket closed. Code: {:?}, Reason: {:?}", code, reason);
+    }
+}
+
+fn websocket_server(tx1: Sender<Command>, rx2: Receiver<CommandResult>) {
+    ws::listen("127.0.0.1:3012", |out| Server {
+        out: out,
+        tx1: &tx1,
+        rx2: &rx2,
+    })
+    .unwrap()
 }

@@ -1,3 +1,3 @@
 [workspace] # as virtual manifest
 
-members = ["core", "daemon", "client"]
+members = ["core", "daemon"]
